@@ -9,10 +9,21 @@ add_executable(HelloEvpp "${HELLOEVPP_DEMO_HEADERS}" "${HELLOEVPP_DEMO_SOURCES}"
 
 target_include_directories(HelloEvpp PUBLIC
     "${CMAKE_SOURCE_DIR}/src"
-    "C:/Dev/vcpkg/packages/evpp_x64-windows/include")
+    "C:/Dev/vcpkg/packages/evpp_x64-windows/include"
+    "C:/Dev/vcpkg/packages/glog_x64-windows/include"
+    "C:/Dev/vcpkg/packages/gflags_x64-windows/include"
+    "C:/Dev/vcpkg/packages/rapidjson_x64-windows/include"
+    "C:/Dev/vcpkg/packages/libevent_x64-windows/include")
     
 target_link_libraries(HelloEvpp PRIVATE
     "C:/Dev/vcpkg/packages/evpp_x64-windows/lib/evmc_static.lib"
     "C:/Dev/vcpkg/packages/evpp_x64-windows/lib/evnsq_static.lib"
-    "C:/Dev/vcpkg/packages/evpp_x64-windows/lib/evpp_lite_static.lib"
-    "C:/Dev/vcpkg/packages/evpp_x64-windows/lib/evpp_static.lib")
+    "C:/Dev/vcpkg/packages/evpp_x64-windows/lib/evpp_static.lib"
+    "C:/Dev/vcpkg/packages/glog_x64-windows/lib/glog.lib"
+    "C:/Dev/vcpkg/packages/gflags_x64-windows/lib/gflags.lib"
+    "C:/Dev/vcpkg/packages/libevent_x64-windows/lib/event.lib"
+    "C:/Dev/vcpkg/packages/libevent_x64-windows/lib/event_core.lib"
+    "C:/Dev/vcpkg/packages/libevent_x64-windows/lib/event_extra.lib"
+    gdi32
+    wsock32
+    ws2_32)
