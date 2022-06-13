@@ -1,5 +1,3 @@
-
-#define GOOGLE_STRIP_LOG 0
 #include <evpp/udp/udp_server.h>
 #include <evpp/udp/udp_message.h>
 

@@ -1,0 +1,9 @@
+Package: evpp
+Version: 0.7.0
+Port-Version: 5
+Depends: glog, libevent, rapidjson
+Architecture: x64-windows-static
+Multi-Arch: same
+Abi: 00514f8f4a8fe5d6dcb757c9bfc0604564532c052b9ec0b7b86fb0a3959866e2
+Description: A modern C++ network library based on libevent for developing high performance network services in TCP/UDP/HTTP protocols.
+Type: Port

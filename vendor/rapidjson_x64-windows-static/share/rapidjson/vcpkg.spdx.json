@@ -1,0 +1,115 @@
+{
+  "$schema": "https://raw.githubusercontent.com/spdx/spdx-spec/v2.2.1/schemas/spdx-schema.json",
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://spdx.org/spdxdocs/rapidjson-x64-windows-static-2020-09-14#2-704868f8-51ff-416e-a2df-609d7d25d7be",
+  "name": "rapidjson:x64-windows-static@2020-09-14#2 31bc57882bd17a2036fffd73a00ec1f6a33b4fbc54b416615c333adae3fbaf64",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-67e17c1782801cf481be9ac0b3765dff3e4bdeb8"
+    ],
+    "created": "2022-06-13T12:01:16Z"
+  },
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-0"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-1"
+    },
+    {
+      "spdxElementId": "SPDXRef-binary",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-0",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-1",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-1",
+      "relationshipType": "DEPENDENCY_MANIFEST_OF",
+      "relatedSpdxElement": "SPDXRef-port"
+    }
+  ],
+  "packages": [
+    {
+      "name": "rapidjson",
+      "SPDXID": "SPDXRef-port",
+      "versionInfo": "2020-09-14#2",
+      "downloadLocation": "git+https://github.com/Microsoft/vcpkg#ports/rapidjson",
+      "homepage": "http://rapidjson.org/",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "description": "A fast JSON parser/generator for C++ with both SAX/DOM style API <http://rapidjson.org/>",
+      "comment": "This is the port (recipe) consumed by vcpkg."
+    },
+    {
+      "name": "rapidjson:x64-windows-static",
+      "SPDXID": "SPDXRef-binary",
+      "versionInfo": "31bc57882bd17a2036fffd73a00ec1f6a33b4fbc54b416615c333adae3fbaf64",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "This is a binary package built by vcpkg."
+    },
+    {
+      "SPDXID": "SPDXRef-resource-1",
+      "name": "Tencent/rapidjson",
+      "downloadLocation": "git+https://github.com/Tencent/rapidjson@ce81bc9edfe773667a7a4454ba81dac72ed4364c",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a1bbc5668fca9ee34b05ae424a5177b66beaf7b3b4cdfbb3cb067fc58ce91717b4030e2c268ad32e4aa4a7ef59ab5e3aae05ff71d0d91d463eafa7d2e077df07"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "fileName": "./portfile.cmake",
+      "SPDXID": "SPDXRef-file-0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "61fdb566c361655c30b271bc99d00c41133ecfa7692b2dddc9f053deff1793ab"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./vcpkg.json",
+      "SPDXID": "SPDXRef-file-1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a15de17be3c1024c0797b811630b570ae9a13a0d0f30abb768d311ed9d280e0b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}
