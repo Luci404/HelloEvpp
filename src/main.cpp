@@ -15,15 +15,11 @@ int main(int argc, char** argv)
     std::vector<int> ports = { 1053, 5353 };
     evpp::udp::Server server;
 
-    server.SetMessageHandler([](evpp::EventLoop* loop, evpp::udp::MessagePtr& msg) {
-        evpp::udp::SendMessage(msg);
-        });
+    server.SetMessageHandler([](evpp::EventLoop* loop, evpp::udp::MessagePtr& msg) { evpp::udp::SendMessage(msg); });
     server.Init(ports);
     server.Start();
 
-    while (!server.IsStopped()) {
-        usleep(1);
-    }
+    while (!server.IsStopped()) { usleep(1); }
 	
     return 0;
 }
