@@ -25,11 +25,10 @@ target_link_libraries(evpp_static PUBLIC
     Iphlpapi
     shlwapi)
 
-file(GLOB_RECURSE HELLOEVPP_DEMO_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
-file(GLOB_RECURSE HELLOEVPP_DEMO_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-file(GLOB_RECURSE HELLOEVPP_DEMO_MODULES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ixx")
-add_executable(HelloEvpp "${HELLOEVPP_DEMO_HEADERS}" "${HELLOEVPP_DEMO_SOURCES}" "${HELLOEVPP_DEMO_MODULES}")
+add_executable(HelloEvppServer "${CMAKE_CURRENT_SOURCE_DIR}/src/server.cpp")
+target_include_directories(HelloEvppServer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(HelloEvppServer PUBLIC evpp_static)
 
-target_include_directories(HelloEvpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-target_link_libraries(HelloEvpp PUBLIC evpp_static)
+add_executable(HelloEvppClient "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
+target_include_directories(HelloEvppClient PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(HelloEvppClient PUBLIC evpp_static)
