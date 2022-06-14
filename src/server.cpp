@@ -15,6 +15,7 @@ int main(int argc, char** argv)
 
 	server.SetMessageHandler([](evpp::EventLoop* loop, evpp::udp::MessagePtr& msg) {
 		std::cout << "MSG:" << msg->NextAllString() << '\n';
+		evpp::udp::SendMessage(msg);
 	});
 
 	server.Init(ports);

@@ -22,7 +22,7 @@ void cb_func(evutil_socket_t fd, short what, void* arg);
 void writecb(struct bufferevent*, void*);
 void readcb(struct bufferevent*, void*);
 
-struct sockaddr_in serveraddr;
+struct sockaddr_in servaddr;
 
 int main(int argc, char** argv)
 {
@@ -65,17 +65,17 @@ int main(int argc, char** argv)
 
 	///
 	
-	memset(&serveraddr, 0, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	serveraddr.sin_port = htons(1053);
+	memset(&servaddr, 0, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	servaddr.sin_port = htons(1053);
 
 	evutil_socket_t sockfd;
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		perror("socket creation failed");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	event* ev1, *ev2;
 	timeval five_seconds = { 5, 0 };
 	// event_base* base = event_base_new();
@@ -87,30 +87,59 @@ int main(int argc, char** argv)
 	event_add(ev2, nullptr);
 	event_base_dispatch(base);
 
+
 	return 0;
 }
+
+int cnt = 0;
 
 void cb_func(evutil_socket_t fd, short what, void* arg)
 {
 	const char* data = (const char*)arg;
-	printf("Got an event on socket %d:%s%s%s%s [%s]\n",
+	/*printf("Got an event on socket %d:%s%s%s%s [%s]\n",
 		(int)fd,
 		(what & EV_TIMEOUT) ? " timeout" : "",
 		(what & EV_READ) ? " read" : "",
 		(what & EV_WRITE) ? " write" : "",
 		(what & EV_SIGNAL) ? " timeout" : "",
-		data);
+		data);*/
+
+
+	struct sockaddr_in sin;
+	socklen_t len = sizeof(sin);
+	if (getsockname(fd, (struct sockaddr*)&sin, &len) != -1)
+		printf("port number %d - %i\n", ntohs(sin.sin_port), cnt);
+
 
 	if (what & EV_WRITE)
 	{
 		// About MSG_CONFIRM: https://stackoverflow.com/questions/16594387/why-should-i-use-or-not-use-msg-confirm
 		const char* msg = "Hello from client";
-		sendto(fd, msg, strlen(msg), 0, (const sockaddr*)&serveraddr, sizeof(serveraddr));
+		sendto(fd, msg, strlen(msg), 0, (const sockaddr*)&servaddr, sizeof(servaddr));
 	}
 
-	if (what & EV_TIMEOUT)
+	if (what & EV_READ)
 	{
-
+		// recvmmsg could improve performance at the cost of a significantly more complex interface
+		//int readn = ::recvfrom(thread->fd(), (char*)recv_msg->WriteBegin(), recv_buf_size_, 0, recv_msg->mutable_remote_addr(), &addr_len);
+		char buffer[1024];
+		// Warn: MSG_WAITALL should block until all data has been received. From the manual page on recv - https://linux.die.net/man/2/recv
+		int addrlen = sizeof(servaddr);
+		/*
+		https://linux.die.net/man/3/recvfrom
+		[...] If the address argument is not a null pointer and the protocol provides the source address of messages,
+		the source address of the received message shall be stored in the sockaddr structure pointed to by the address argument,
+		and the length of this address shall be stored in the object pointed to by the address_len argument.
+		*/
+		int n = recvfrom(fd, (char*)buffer, 1024, 0, nullptr, nullptr);
+		if (n == SOCKET_ERROR)
+		{
+			//std::cout << "Error reading socket" << std::endl;
+			return;
+		}
+		cnt++;
+		buffer[n] = '\0';
+		printf("Server : %s\n", buffer);
 	}
 }
 
@@ -123,3 +152,4 @@ void readcb(bufferevent*, void*)
 {
 	std::cout << "readrb" << std::endl;
 }
+	
