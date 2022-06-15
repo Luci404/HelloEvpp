@@ -2,6 +2,7 @@
 #include <evpp/udp/udp_message.h>
 
 #include <vector>
+#include <array>
 
 const uint32_t MAX_CLIENTS = 128;
 
@@ -43,11 +44,14 @@ public:
 	NotImplementedException() : std::logic_error("Function not yet implemented") { };
 };
 
+#include <sstream>
+
 struct Address
 {
 	Address()
-		: type(AddressFamily::None)
+		: type(AddressFamily::None), port(0)
 	{
+		memset(&address, 0, sizeof(address));
 	}
 
 	Address(const sockaddr* sa)
@@ -62,7 +66,7 @@ struct Address
 
 			const sockaddr_in* sin = reinterpret_cast<const sockaddr_in*>(sa);
 			port = sin->sin_port;
-			memcpy(&sin->sin_addr, address.ipv4, sizeof(address.ipv4));
+			memcpy(&address.ipv4, &sin->sin_addr, sizeof(address.ipv4));
 
 			break;
 		}
@@ -72,7 +76,7 @@ struct Address
 
 			const sockaddr_in6* sin6 = reinterpret_cast<const sockaddr_in6*>(sa);
 			port = sin6->sin6_port;
-			memcpy(&sin6->sin6_addr, address.ipv6, sizeof(address.ipv6));
+			memcpy(&address.ipv6, &sin6->sin6_addr, sizeof(address.ipv6));
 		}
 		default:
 		{
@@ -88,12 +92,6 @@ struct Address
 	{
 		throw NotImplementedException();
 	}
-
-	/*/Address& operator=(const Address& other)
-	{
-		x = other.x;
-		return *this;
-	}*/
 
 	bool operator==(const Address& other)
 	{
@@ -125,7 +123,40 @@ struct Address
 		}
 	}
 
-	union { uint8_t ipv4[4]; uint8_t ipv6[8]; } address;
+	std::string ToString() const
+	{
+		switch(type)
+		{
+		case AddressFamily::None:
+		{
+			return "None";
+		}
+		case AddressFamily::IPv4:
+		{
+			std::stringstream ss;
+			ss << (int)address.ipv4[0] << '.' << (int)address.ipv4[1] << '.';
+			ss << (int)address.ipv4[2] << '.' << (int)address.ipv4[3];
+			ss << ':' << (int)port;
+			return ss.str();
+		}
+		case AddressFamily::IPv6:
+		{
+			std::stringstream ss;
+			ss << (int)address.ipv6[0] << ':' << (int)address.ipv6[1] << ':';
+			ss << (int)address.ipv6[2] << ':' << (int)address.ipv6[3] << ':';
+			ss << (int)address.ipv6[4] << ':' << (int)address.ipv6[5];
+			ss << ':' << (int)port;
+			return ss.str();
+		}
+		default:
+		{
+			assert(false);
+			return false;
+		}
+		}
+	}
+
+	union { std::array<uint8_t, 4> ipv4; std::array<uint8_t, 8> ipv6; } address;
 	uint16_t port;
 	AddressFamily type;
 };
@@ -292,7 +323,6 @@ static void test_address()
 }
 */
 
-#include <array>
 // http://www.blog.matejzavrsnik.com/map_vs_unordered_map_performance.html
 std::array<Address, MAX_CLIENTS> ClientAddress;
 std::array<bool, MAX_CLIENTS> ClientConnected;
@@ -314,6 +344,7 @@ uint16_t FindClientIdentifier(const Address& address)
 {
 	for (int i = 0; i < MAX_CLIENTS; ++i)
 	{
+		std::cout << ClientAddress[i].ToString() << " == " << address.ToString() << " - " << (bool)(ClientAddress[i] == address) << std::endl;
 		if (ClientConnected[i] && ClientAddress[i] == address)
 		{
 			return i;
@@ -340,6 +371,11 @@ int main(int argc, char** argv)
 
 	///
 
+	for (int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		ClientConnected[i] = false;
+		ClientAddress[i] = Address();
+	}
 
 	///
 
@@ -351,7 +387,10 @@ int main(int argc, char** argv)
 
 		uint8_t mode = msg->ReadByte();
 
-		uint16_t clientIdentifier = FindClientIdentifier(msg->remote_addr());
+		Address address = Address(msg->remote_addr()); // TODO Add compare for *sockaddr in Address class
+		uint16_t clientIdentifier = FindClientIdentifier(address);
+
+		std::cout << clientIdentifier << std::endl;
 
 		// if unreliable
 		if (mode == 0)
@@ -389,8 +428,9 @@ int main(int argc, char** argv)
 			This is necessary because the first response packet may not have gotten through due to packet loss. If we don’t resend this response,
 			the client gets stuck in the connecting state until it times out.
 			*/
-			if (clientIdentifier == InvalidIdentifier)
+			if (clientIdentifier != InvalidIdentifier)
 			{
+				// Valid identifier
 				std::cout << "client already connected" << std::endl;
 
 				// TODO: send connection accepted
@@ -408,9 +448,13 @@ int main(int argc, char** argv)
 			assign the client to a free slot and respond with connection accepted.
 			*/
 			uint16_t freeIdentifier = FindFreeClientIdentifier();
+			std::cout << "Free: " << freeIdentifier << std::endl;
 			if (freeIdentifier != InvalidIdentifier)
 			{
+				std::cout << "client connected" << std::endl;
+
 				ClientAddress[freeIdentifier] = Address(msg->remote_addr());
+				std::cout << "retretretre: " << ClientAddress[freeIdentifier].ToString() << std::endl;
 				ClientConnected[freeIdentifier] = true;
 
 				// Send connection accepted
@@ -425,6 +469,8 @@ int main(int argc, char** argv)
 			*/
 			else
 			{
+				std::cout << "server full connected" << std::endl;
+
 				// Server is full, send connection denied
 				evpp::udp::MessagePtr msg = std::make_shared<evpp::udp::Message>(msg->sockfd());
 				msg->AppendInt8(2); // mode
