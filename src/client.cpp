@@ -124,6 +124,7 @@ void cb_func(evutil_socket_t fd, short what, void* arg)
 
 	if (what & EV_READ)
 	{
+		std::cout << "r" << std::endl;
 		// recvmmsg could improve performance at the cost of a significantly more complex interface
 		//int readn = ::recvfrom(thread->fd(), (char*)recv_msg->WriteBegin(), recv_buf_size_, 0, recv_msg->mutable_remote_addr(), &addr_len);
 		char buffer[1024];

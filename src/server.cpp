@@ -344,7 +344,6 @@ uint16_t FindClientIdentifier(const Address& address)
 {
 	for (int i = 0; i < MAX_CLIENTS; ++i)
 	{
-		std::cout << ClientAddress[i].ToString() << " == " << address.ToString() << " - " << (bool)(ClientAddress[i] == address) << std::endl;
 		if (ClientConnected[i] && ClientAddress[i] == address)
 		{
 			return i;
@@ -383,6 +382,9 @@ int main(int argc, char** argv)
 	evpp::udp::Server server;
 
 	server.SetMessageHandler([](evpp::EventLoop* loop, evpp::udp::MessagePtr& msg) {
+		// std::cout << "MSG:" << msg->NextAllString() << " - fd: " << msg->sockfd() << '\n';
+		//evpp::udp::SendMessage(msg);
+
 		// In order of frequency
 
 		uint8_t mode = msg->ReadByte();
@@ -434,10 +436,11 @@ int main(int argc, char** argv)
 				std::cout << "client already connected" << std::endl;
 
 				// TODO: send connection accepted
-				evpp::udp::MessagePtr msg = std::make_shared<evpp::udp::Message>(msg->sockfd());
-				msg->AppendInt8(2); // mode
-				msg->AppendInt8(1); // status code
-				evpp::udp::SendMessage(msg);
+				evpp::udp::MessagePtr res = std::make_shared<evpp::udp::Message>(msg->sockfd());
+				res->set_remote_addr(*msg->remote_addr());
+				res->AppendInt8(2); // mode
+				res->AppendInt8(1); // status code
+				evpp::udp::SendMessage(res);
 				return;
 			}
 
@@ -458,10 +461,11 @@ int main(int argc, char** argv)
 				ClientConnected[freeIdentifier] = true;
 
 				// Send connection accepted
-				evpp::udp::MessagePtr msg = std::make_shared<evpp::udp::Message>(msg->sockfd());
-				msg->AppendInt8(2); // mode
-				msg->AppendInt8(1); // status code
-				evpp::udp::SendMessage(msg);
+				evpp::udp::MessagePtr res = std::make_shared<evpp::udp::Message>(msg->sockfd());
+				res->set_remote_addr(*msg->remote_addr());
+				res->AppendInt8(2); // mode
+				res->AppendInt8(1); // status code
+				evpp::udp::SendMessage(res);
 			}
 
 			/*
@@ -472,10 +476,11 @@ int main(int argc, char** argv)
 				std::cout << "server full connected" << std::endl;
 
 				// Server is full, send connection denied
-				evpp::udp::MessagePtr msg = std::make_shared<evpp::udp::Message>(msg->sockfd());
-				msg->AppendInt8(2); // mode
-				msg->AppendInt8(0); // status code
-				evpp::udp::SendMessage(msg);
+				evpp::udp::MessagePtr res = std::make_shared<evpp::udp::Message>(msg->sockfd());
+				res->set_remote_addr(*msg->remote_addr());
+				res->AppendInt8(2); // mode
+				res->AppendInt8(0); // status code
+				evpp::udp::SendMessage(res);
 			}
 		}
 		else
