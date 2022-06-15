@@ -479,6 +479,8 @@ void send(std::shared_ptr<Packet> packet)
 	cursor = (cursor + 1) % 1024;
 }
 
+#include <bitset>
+
 void cb_func(evutil_socket_t fd, short what, void* arg)
 {
 	if (what & EV_WRITE)
@@ -499,19 +501,31 @@ void cb_func(evutil_socket_t fd, short what, void* arg)
 	{
 		std::array<uint8_t, 1024> buffer;
 		memset(&buffer, 0, sizeof(buffer));
+		/*
+		The recvfrom function reads one packet from the socket socket into the buffer buffer.
+		The size argument specifies the maximum number of bytes to be read. If the packet is longer
+		than size bytes, then you get the first size bytes of the packet and the rest of the packet is lost.
+		*/
 		sockaddr_in from;
 		int addrlen = sizeof(from);
 		int n = recvfrom(fd, (char*)&buffer, 1024, 0, (sockaddr*)&from, &addrlen);
 		if (n == SOCKET_ERROR)
 		{
-			std::cout << "Error reading socket" << WSAGetLastError() << std::endl;
+			std::cout << "Error reading socket: " << WSAGetLastError() << std::endl;
 			return;
 		}
 
-		uint8_t mode = reinterpret_cast<uint8_t>(&buffer);
-
 		Address address = Address((sockaddr*)&from); // TODO Add compare for *sockaddr in Address class
+		std::cout << "recv | from " << address.ToString() << std::endl;
+
+		uint8_t mode = buffer[0];
+		std::cout << " - mode: " << (int)mode << std::endl;
+
+		std::bitset<8> bs(mode);
+		std::cout << " - data: " << bs << std::endl;
 		
+		return;
+
 		uint16_t clientIdentifier = FindClientIdentifier(address);
 
 		// In order of frequency

@@ -95,6 +95,7 @@ int main(int argc, char** argv)
 }
 
 #include <vector>
+#include <bitset>
 
 void cb_func(evutil_socket_t fd, short what, void* arg)
 {
@@ -118,13 +119,16 @@ void cb_func(evutil_socket_t fd, short what, void* arg)
 	{
 		// About MSG_CONFIRM: https://stackoverflow.com/questions/16594387/why-should-i-use-or-not-use-msg-confirm
 
-		std::vector<uint8_t> msg;
-		msg.push_back(2); // mode
-		sendto(fd, (const char*)msg.data(), msg.size(), 0, (const sockaddr*)&servaddr, sizeof(servaddr));
+		uint8_t data = 2; // mode
+		sendto(fd, (const char*)&data, sizeof(data), 0, (const sockaddr*)&servaddr, sizeof(servaddr));
+		
+		std::bitset<8> bs(data);
+		std::cout << "sending data:" << bs << std::endl;;
 	}
 
 	if (what & EV_READ)
 	{
+		return;
 		// recvmmsg could improve performance at the cost of a significantly more complex interface
 		//int readn = ::recvfrom(thread->fd(), (char*)recv_msg->WriteBegin(), recv_buf_size_, 0, recv_msg->mutable_remote_addr(), &addr_len);
 		std::array<uint8_t, 1024> buffer;
