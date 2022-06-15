@@ -24,6 +24,8 @@ void readcb(struct bufferevent*, void*);
 
 struct sockaddr_in servaddr;
 
+int cnt = 0;
+
 int main(int argc, char** argv)
 {
 	// WSAStartup
@@ -91,8 +93,6 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-int cnt = 0;
-
 void cb_func(evutil_socket_t fd, short what, void* arg)
 {
 	const char* data = (const char*)arg;
@@ -114,6 +114,7 @@ void cb_func(evutil_socket_t fd, short what, void* arg)
 	if (what & EV_WRITE)
 	{
 		// About MSG_CONFIRM: https://stackoverflow.com/questions/16594387/why-should-i-use-or-not-use-msg-confirm
+
 		const char* msg = "Hello from client";
 		sendto(fd, msg, strlen(msg), 0, (const sockaddr*)&servaddr, sizeof(servaddr));
 	}
