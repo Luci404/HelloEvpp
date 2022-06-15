@@ -93,6 +93,8 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+#include <vector>
+
 void cb_func(evutil_socket_t fd, short what, void* arg)
 {
 	const char* data = (const char*)arg;
@@ -115,8 +117,9 @@ void cb_func(evutil_socket_t fd, short what, void* arg)
 	{
 		// About MSG_CONFIRM: https://stackoverflow.com/questions/16594387/why-should-i-use-or-not-use-msg-confirm
 
-		const char* msg = "Hello from client";
-		sendto(fd, msg, strlen(msg), 0, (const sockaddr*)&servaddr, sizeof(servaddr));
+		std::vector<uint8_t> msg;
+		msg.push_back(2); // mode
+		sendto(fd, (const char*)msg.data(), msg.size(), 0, (const sockaddr*)&servaddr, sizeof(servaddr));
 	}
 
 	if (what & EV_READ)
