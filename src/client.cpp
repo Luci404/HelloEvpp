@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <iostream>
+#include <array>
 
 #ifndef _WIN32
 #include <netinet/in.h>
@@ -107,11 +108,11 @@ void cb_func(evutil_socket_t fd, short what, void* arg)
 		data);*/
 
 
-	struct sockaddr_in sin;
+	/*struct sockaddr_in sin;
 	socklen_t len = sizeof(sin);
 	if (getsockname(fd, (struct sockaddr*)&sin, &len) != -1)
 		printf("port number %d - %i\n", ntohs(sin.sin_port), cnt);
-
+		*/
 
 	if (what & EV_WRITE)
 	{
@@ -124,27 +125,61 @@ void cb_func(evutil_socket_t fd, short what, void* arg)
 
 	if (what & EV_READ)
 	{
-		std::cout << "r" << std::endl;
 		// recvmmsg could improve performance at the cost of a significantly more complex interface
 		//int readn = ::recvfrom(thread->fd(), (char*)recv_msg->WriteBegin(), recv_buf_size_, 0, recv_msg->mutable_remote_addr(), &addr_len);
-		char buffer[1024];
+		std::array<uint8_t, 1024> buffer;
+		memset(&buffer, 0, sizeof(buffer));
+
 		// Warn: MSG_WAITALL should block until all data has been received. From the manual page on recv - https://linux.die.net/man/2/recv
-		int addrlen = sizeof(servaddr);
 		/*
 		https://linux.die.net/man/3/recvfrom
 		[...] If the address argument is not a null pointer and the protocol provides the source address of messages,
 		the source address of the received message shall be stored in the sockaddr structure pointed to by the address argument,
 		and the length of this address shall be stored in the object pointed to by the address_len argument.
 		*/
-		int n = recvfrom(fd, (char*)buffer, 1024, 0, nullptr, nullptr);
+		// int addrlen = sizeof(servaddr);
+		int n = recvfrom(fd, (char*)&buffer, 1024, 0, nullptr, nullptr);
 		if (n == SOCKET_ERROR)
 		{
-			//std::cout << "Error reading socket" << std::endl;
+			std::cout << "Error reading socket" << std::endl;
 			return;
 		}
 		cnt++;
-		buffer[n] = '\0';
-		printf("Server : %s\n", buffer);
+
+		// TODO: Security check if is coming from server
+
+		uint8_t mode = reinterpret_cast<uint8_t>(&buffer);
+		if (mode == 0)
+		{
+			std::cout << "handling unreliable package" << std::endl;
+		}
+		else if (mode == 1)
+		{
+			std::cout << "handling reliable package" << std::endl;
+		}
+		else if (mode == 2)
+		{
+			uint8_t res = reinterpret_cast<uint8_t>(&buffer + sizeof(uint8_t));
+
+			if (res == 0) // connection denied
+			{
+				std::cout << "handling connection denied" << std::endl;
+			}
+			else if (res == 1) // connection accepted
+			{
+				std::cout << "handling connection accepted" << std::endl;
+				uint8_t myid = reinterpret_cast<uint8_t>(&buffer + (sizeof(uint8_t) * 2));
+				std::cout << "myid: " << (int)myid << std::endl;
+			}
+			else
+			{
+				std::cout << "handling unknown status code" << std::endl;
+			}
+		}
+		else
+		{
+			std::cout << "handling unknown mode: " << (int)mode << std::endl;
+		}
 	}
 }
 

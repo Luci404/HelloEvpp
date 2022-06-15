@@ -360,40 +360,161 @@ bool IsClientConnected(uint16_t clientIdentifier)
 
 /// 
 
-ClientInfo ClientInfos[MAX_CLIENTS];
+#include <string.h>
+#include <errno.h>
+#include <stdio.h>
+#include <signal.h>
+#include <iostream>
+#include <array>
+
+#ifndef _WIN32
+#include <netinet/in.h>
+# ifdef _XOPEN_SOURCE_EXTENDED
+#  include <arpa/inet.h>
+# endif
+#include <sys/socket.h>
+#endif
+
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+#include <event2/listener.h>
+#include <event2/util.h>
+#include <event2/event.h>
+
+void cb_func(evutil_socket_t fd, short what, void* arg);
+
+struct sockaddr_in servaddr;
+
+int cnt = 0;
+
 int main(int argc, char** argv)
 {
-	WSADATA wsaData;
-	WORD wVersionRequested = MAKEWORD(2, 2);
-	int error = WSAStartup(wVersionRequested, &wsaData);
-	if (0 != error) { return 0; }
+	// WSAStartup
+	WSADATA wsadata;
 
-	///
+	int wsastartupResult = WSAStartup(MAKEWORD(2, 2), &wsadata);
 
-	for (int i = 0; i < MAX_CLIENTS; ++i)
+	if (wsastartupResult != 0)
 	{
-		ClientConnected[i] = false;
-		ClientAddress[i] = Address();
+		std::cout << "Error: Failed to initialize winsock API." << std::endl;
+		return false;
 	}
 
 	///
 
-	std::vector<int> ports = { 1053, 5353 };
-	evpp::udp::Server server;
+	const char** methods = event_get_supported_methods();
+	printf("Starting libevent %f. Available methods are: \n", event_get_version());
+	for (int i = 0; methods[i] != nullptr; ++i) { printf(" - %s\n", methods[i]); }
 
-	server.SetMessageHandler([](evpp::EventLoop* loop, evpp::udp::MessagePtr& msg) {
-		// std::cout << "MSG:" << msg->NextAllString() << " - fd: " << msg->sockfd() << '\n';
-		//evpp::udp::SendMessage(msg);
+	///
 
-		// In order of frequency
+	event_base* base = event_base_new();
+	if (!base)
+	{
+		printf("couldn't get an event_base! / Could not initialize libevent");
+		return 1;
+	}
+	else
+	{
+		printf("Using Libevent with backend method %s.", event_base_get_method(base));
 
-		uint8_t mode = msg->ReadByte();
+		// This is only true on linux?
+		event_method_feature features = (event_method_feature)event_base_get_features(base);
+		if ((features & EV_FEATURE_ET)) { printf("  Edge-triggered events are supported."); }
+		if ((features & EV_FEATURE_O1)) { printf("  O(1) event notifiaction is supported."); }
+		if ((features & EV_FEATURE_FDS)) { printf("  ALL FD types are supported"); }
+		printf("");
+	}
 
-		Address address = Address(msg->remote_addr()); // TODO Add compare for *sockaddr in Address class
+	///
+
+	evutil_socket_t sockfd;
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(&servaddr, 0, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = INADDR_ANY;
+	servaddr.sin_port = htons(1053);
+
+	if (bind(sockfd, (const struct sockaddr*)&servaddr, sizeof(servaddr)) < 0)
+	{
+		perror("bind failed");
+		exit(EXIT_FAILURE);
+	}
+
+	std::cout << "bound" << std::endl;
+
+	event* ev1, * ev2;
+	timeval five_seconds = { 5, 0 };
+	// event_base* base = event_base_new();
+
+	ev1 = event_new(base, sockfd, EV_TIMEOUT | EV_READ | EV_PERSIST, cb_func, (char*)"Reading event");
+	ev2 = event_new(base, sockfd, EV_WRITE | EV_PERSIST, cb_func, (char*)"Writing event");
+
+	event_add(ev1, &five_seconds);
+	event_add(ev2, nullptr);
+	event_base_dispatch(base);
+
+	return 0;
+}
+
+struct Packet
+{
+	void* data;
+	uint16_t size;
+	uint16_t recvaddrsize;
+	sockaddr* recvaddr;
+};
+
+std::array<std::shared_ptr<Packet>, 1024> packets;
+
+int cursor = 0;
+
+void send(std::shared_ptr<Packet> packet)
+{
+	packets[cursor] = packet;
+	cursor = (cursor + 1) % 1024;
+}
+
+void cb_func(evutil_socket_t fd, short what, void* arg)
+{
+	if (what & EV_WRITE)
+	{
+		for (std::shared_ptr<Packet>& packet : packets)
+		{
+			if (packet == nullptr)
+			{
+				return;
+			}
+
+			sendto(fd, (const char*)packet->data, packet->size, 0, packet->recvaddr, packet->recvaddrsize);
+			packet == nullptr;
+		}
+	}
+
+	if (what & EV_READ)
+	{
+		std::array<uint8_t, 1024> buffer;
+		memset(&buffer, 0, sizeof(buffer));
+		sockaddr_in from;
+		int addrlen = sizeof(from);
+		int n = recvfrom(fd, (char*)&buffer, 1024, 0, (sockaddr*)&from, &addrlen);
+		if (n == SOCKET_ERROR)
+		{
+			std::cout << "Error reading socket" << WSAGetLastError() << std::endl;
+			return;
+		}
+
+		uint8_t mode = reinterpret_cast<uint8_t>(&buffer);
+
+		Address address = Address((sockaddr*)&from); // TODO Add compare for *sockaddr in Address class
+		
 		uint16_t clientIdentifier = FindClientIdentifier(address);
 
-		std::cout << clientIdentifier << std::endl;
-
+		// In order of frequency
 		// if unreliable
 		if (mode == 0)
 		{
@@ -436,11 +557,13 @@ int main(int argc, char** argv)
 				std::cout << "client already connected" << std::endl;
 
 				// TODO: send connection accepted
-				evpp::udp::MessagePtr res = std::make_shared<evpp::udp::Message>(msg->sockfd());
-				res->set_remote_addr(*msg->remote_addr());
-				res->AppendInt8(2); // mode
-				res->AppendInt8(1); // status code
-				evpp::udp::SendMessage(res);
+				std::shared_ptr<Packet> res = std::make_shared<Packet>();
+				res->recvaddr = (sockaddr*)&from;
+				res->recvaddrsize = addrlen;
+				res->size = sizeof(uint16_t);
+				res->data = malloc(res->size);
+				memset(res->data, 0b0000001000000001, sizeof(uint16_t)); // mode, status code
+				send(res);
 				return;
 			}
 
@@ -456,16 +579,19 @@ int main(int argc, char** argv)
 			{
 				std::cout << "client connected" << std::endl;
 
-				ClientAddress[freeIdentifier] = Address(msg->remote_addr());
+				ClientAddress[freeIdentifier] = address;
 				std::cout << "retretretre: " << ClientAddress[freeIdentifier].ToString() << std::endl;
 				ClientConnected[freeIdentifier] = true;
 
 				// Send connection accepted
-				evpp::udp::MessagePtr res = std::make_shared<evpp::udp::Message>(msg->sockfd());
-				res->set_remote_addr(*msg->remote_addr());
-				res->AppendInt8(2); // mode
-				res->AppendInt8(1); // status code
-				evpp::udp::SendMessage(res);
+				std::shared_ptr<Packet> res = std::make_shared<Packet>();
+				res->recvaddr = (sockaddr*)&from;
+				res->recvaddrsize = addrlen;
+				res->size = sizeof(uint16_t);
+				res->data = malloc(res->size);
+				memset(res->data, 0b0000001000000001, sizeof(uint16_t)); // mode, status code
+				send(res);
+				//evpp::udp::SendMessage(res);
 			}
 
 			/*
@@ -476,25 +602,23 @@ int main(int argc, char** argv)
 				std::cout << "server full connected" << std::endl;
 
 				// Server is full, send connection denied
-				evpp::udp::MessagePtr res = std::make_shared<evpp::udp::Message>(msg->sockfd());
-				res->set_remote_addr(*msg->remote_addr());
-				res->AppendInt8(2); // mode
-				res->AppendInt8(0); // status code
-				evpp::udp::SendMessage(res);
+				std::shared_ptr<Packet> res = std::make_shared<Packet>();
+				res->recvaddr = (sockaddr*)&from;
+				res->recvaddrsize = addrlen;
+				res->size = sizeof(uint16_t);
+				res->data = malloc(res->size);
+				memset(res->data, 0b0000001000000000, sizeof(uint16_t)); // mode, status code
+				send(res);
+				//evpp::udp::SendMessage(res);
 			}
 		}
 		else
 		{
-			std::cout << "handling unknown package type" << std::endl;
+			std::cout << "handling unknown package mode" << (int)mode << std::endl;
 		}
 		// std::cout << "MSG:" << msg->NextAllString() << " - fd: " << msg->sockfd() << '\n';
 		// evpp::udp::SendMessage(msg);
-		});
+	}
 
-	server.Init(ports);
-	server.Start();
 
-	while (!server.IsStopped()) { usleep(1); }
-
-	return 0;
 }
